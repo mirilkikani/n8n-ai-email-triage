@@ -1,0 +1,613 @@
+{
+  "nodes": [
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            },
+            {}
+          ]
+        },
+        "simple": false,
+        "maxResults": 3,
+        "filters": {
+          "labelIds": [
+            "Label_5470754472317477287"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmailTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        0,
+        0
+      ],
+      "id": "d4675cc5-da66-4bf7-abe9-f0f79f46f2ce",
+      "name": "Gmail Trigger",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gqEcd0EGHLunzwN3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-3.5-flash-lite",
+          "mode": "list",
+          "cachedResultName": "Gemini 3.5 Flash Lite"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=You classify customer support emails for an online coffee shop.\nReturn ONLY a JSON object. No extra text, no markdown.\n\nFields:\n- \"category\": one of \"complaint\", \"question\", \"order\", \"spam\"\n- \"urgency\": one of \"high\", \"medium\", \"low\"\n- \"language\": \"DE\" or \"EN\"\n- \"sender_name\": the name from the first line \"From: ...\" of the email\n- \"summary\": one short sentence in English\n\nRules:\n- Pick the MAIN intent. If an email has a complaint and a question, choose complaint.\n- \"high\" urgency only for a complaint with a clear deadline, money problem or legal threat. Spam is always \"low\", even if it says URGENT.\n- An order is \"medium\". A normal question is \"low\", unless the sender needs an answer before the order ships (\"medium\").\n\nEmail subject: {{ $json.subject }}\nEmail body: {{ $json.text }}"
+            }
+          ]
+        },
+        "builtInTools": {},
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1.2,
+      "position": [
+        208,
+        0
+      ],
+      "id": "bc41e419-a445-45dd-940d-93d7a6c145fe",
+      "name": "Message a model",
+      "retryOnFail": false,
+      "waitBetweenTries": 5000,
+      "maxTries": 5,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "OoZVxnBaBOqBdPAA",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        0,
+        224
+      ],
+      "id": "d858c1a0-d3ea-4779-8a6a-47416f95918a",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "operation": "getAll",
+        "limit": 15,
+        "simple": false,
+        "filters": {
+          "labelIds": [
+            "Label_5470754472317477287"
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        272,
+        128
+      ],
+      "id": "81d9087f-8330-4086-a6b0-d49c4b1ff3e3",
+      "name": "Get many messages",
+      "webhookId": "319357de-9347-4d46-9c96-2d2c10e09da2",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gqEcd0EGHLunzwN3",
+          "name": "Gmail account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const out = [];\nconst items = $input.all();\n\nfor (let i = 0; i < items.length; i++) {\n  const raw = items[i].json.content?.parts?.[0]?.text ?? '';\n  let r = {};\n  try {\n    r = JSON.parse(raw.replace(/```json|```/g, '').trim());\n  } catch (e) {\n    r = { category: 'parse_error', urgency: '', language: '', sender_name: '', summary: raw.slice(0, 200) };\n  }\n\n  let mail;\n  try { mail = $('Get many messages').itemMatching(i).json; }\n  catch (e) { mail = $('Gmail Trigger').itemMatching(i).json; }\n\n  out.push({ json: {\n    received: mail.date,\n    message_id: mail.id,\n    sender_name: r.sender_name,\n    subject: mail.subject,\n    category: r.category,\n    urgency: r.urgency,\n    language: r.language,\n    summary: r.summary,\n  }});\n}\nreturn out;"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        576,
+        0
+      ],
+      "id": "0a606ed0-4eb2-4b13-b790-7f76e92667e8",
+      "name": "Code in JavaScript"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        464,
+        224
+      ],
+      "id": "d988cf70-1567-4e6f-82df-4b1ab8e8ce20",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.wait",
+      "typeVersion": 1.1,
+      "position": [
+        720,
+        144
+      ],
+      "id": "33e64927-bef1-4f97-a057-d0f15e19998e",
+      "name": "Wait",
+      "webhookId": "c9ee4e0b-ec62-43b7-a5fc-c2c58fbf4f43"
+    },
+    {
+      "parameters": {
+        "operation": "append",
+        "documentId": {
+          "__rl": true,
+          "value": "1VdhGxp86Hy_crYyDVVLRvwHHeQb8WgtMlYv56RYNbQM",
+          "mode": "list",
+          "cachedResultName": "Support-Triage-Log",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VdhGxp86Hy_crYyDVVLRvwHHeQb8WgtMlYv56RYNbQM/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1VdhGxp86Hy_crYyDVVLRvwHHeQb8WgtMlYv56RYNbQM/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "autoMapInputData",
+          "value": {},
+          "matchingColumns": [],
+          "schema": [
+            {
+              "id": "received",
+              "displayName": "received",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "message_id",
+              "displayName": "message_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "sender_name",
+              "displayName": "sender_name",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "subject",
+              "displayName": "subject",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "category",
+              "displayName": "category",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "urgency",
+              "displayName": "urgency",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "language",
+              "displayName": "language",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "summary",
+              "displayName": "summary",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.7,
+      "position": [
+        800,
+        4.406894826889413
+      ],
+      "id": "3afd6749-7578-40cd-bc6b-1e7a13182b4b",
+      "name": "Append row in sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "I3j5Dol7iSpSnGCt",
+          "name": "Google Sheets account 2"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 4
+          },
+          "conditions": [
+            {
+              "id": "4f53725e-d2f7-4081-8aad-719d254e0d9c",
+              "leftValue": "={{ $json.category }}",
+              "rightValue": "complaint",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            },
+            {
+              "id": "6e728067-7a07-4757-86f8-63fc6858ce73",
+              "leftValue": "={{ $json.urgency }}",
+              "rightValue": "high",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.4,
+      "position": [
+        1024,
+        16
+      ],
+      "id": "a8f429ac-6efe-4b35-b39a-46d14d18ab4c",
+      "name": "If"
+    },
+    {
+      "parameters": {
+        "sendTo": "mirilkikani@gmail.com",
+        "subject": "=URGENT complaint: {{ $json.subject }}",
+        "emailType": "text",
+        "message": "=Urgent complaint received.  From: {{ $json.sender_name }} Subject: {{ $json.subject }} Language: {{ $json.language }} Summary: {{ $json.summary }}",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.2,
+      "position": [
+        1248,
+        4.406894826889413
+      ],
+      "id": "afaf479d-654c-43fe-831b-f002d603ecdd",
+      "name": "Send a message",
+      "webhookId": "8b0f31c5-5421-4d09-9bca-5329052287e5",
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "gqEcd0EGHLunzwN3",
+          "name": "Gmail account"
+        }
+      }
+    }
+  ],
+  "connections": {
+    "Gmail Trigger": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Wait",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get many messages",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get many messages": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code in JavaScript": {
+      "main": [
+        [
+          {
+            "node": "Append row in sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Loop Over Items": {
+      "main": [
+        [
+          {
+            "node": "Code in JavaScript",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Wait": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append row in sheet": {
+      "main": [
+        [
+          {
+            "node": "If",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If": {
+      "main": [
+        [
+          {
+            "node": "Send a message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "pinData": {
+    "When clicking ‘Execute workflow’": [
+      {}
+    ],
+    "Code in JavaScript": [
+      {
+        "received": "2026-11-06T13:51:32.000Z",
+        "message_id": "1a1b12103c385b06",
+        "sender_name": "SEO Growth Team",
+        "subject": "Boost your Google ranking – 1000 backlinks for $9",
+        "category": "spam",
+        "urgency": "low",
+        "language": "EN",
+        "summary": "An unsolicited promotional offer to buy backlinks for SEO purposes."
+      },
+      {
+        "received": "2026-11-06T13:51:33.000Z",
+        "message_id": "1a1b12102d0db16e",
+        "sender_name": "Account Security",
+        "subject": "URGENT: Your account will be suspended – verify now",
+        "category": "spam",
+        "urgency": "low",
+        "language": "EN",
+        "summary": "Phishing attempt claiming the customer's account will be suspended unless they click a link."
+      },
+      {
+        "received": "2026-11-06T13:51:32.000Z",
+        "message_id": "1a1b1210034b9cde",
+        "sender_name": "Gewinnspiel Zentrale",
+        "subject": "Sie haben ein iPhone gewonnen! Jetzt klicken",
+        "category": "spam",
+        "urgency": "low",
+        "language": "DE",
+        "summary": "A spam message claiming the recipient won an iPhone and urging them to click a link."
+      },
+      {
+        "received": "2026-11-06T13:51:32.000Z",
+        "message_id": "1a1b120ffab5a043",
+        "sender_name": "Noah Bennett",
+        "subject": "Reorder – 5 bags Ethiopia Yirgacheffe",
+        "category": "order",
+        "urgency": "medium",
+        "language": "EN",
+        "summary": "Noah Bennett wants to reorder five bags of Ethiopia Yirgacheffe using his previous address and payment method."
+      },
+      {
+        "received": "2026-11-06T13:51:31.000Z",
+        "message_id": "1a1b120fce3910f4",
+        "sender_name": "Café am Eck (Demo)",
+        "subject": "Nachbestellung Filterpapier, Rechnung an Firma",
+        "category": "order",
+        "urgency": "medium",
+        "language": "DE",
+        "summary": "Mara Lindner is reordering 20 packs of size 4 filter paper and requests the invoice to be billed to Café am Eck GmbH."
+      },
+      {
+        "received": "2026-11-06T13:51:29.000Z",
+        "message_id": "1a1b120f68690283",
+        "sender_name": "Tobias Richter",
+        "subject": "Bestellung: 3x Espresso Classic 1 kg",
+        "category": "order",
+        "urgency": "medium",
+        "language": "DE",
+        "summary": "The customer wants to order three packs of Espresso Classic with invoice payment."
+      },
+      {
+        "received": "2026-11-06T13:51:30.000Z",
+        "message_id": "1a1b120f67d2e10b",
+        "sender_name": "Olivia Grant",
+        "subject": "Order: 2 x Cold Brew Set",
+        "category": "order",
+        "urgency": "medium",
+        "language": "EN",
+        "summary": "Olivia Grant wants to order two Cold Brew Sets and pay via bank transfer."
+      },
+      {
+        "received": "2026-11-06T13:51:29.000Z",
+        "message_id": "1a1b120f45d767c4",
+        "sender_name": "Emily Carter",
+        "subject": "Can I change the delivery address?",
+        "category": "question",
+        "urgency": "medium",
+        "language": "EN",
+        "summary": "Customer is asking if they can change the delivery address for their recently placed order before it ships."
+      },
+      {
+        "received": "2026-11-06T13:51:28.000Z",
+        "message_id": "1a1b120f3fda15a9",
+        "sender_name": "Jonas Weber",
+        "subject": "Garantie auf die Handmühle",
+        "category": "question",
+        "urgency": "low",
+        "language": "DE",
+        "summary": "The customer is asking about the warranty period and proof of purchase requirements for the 'Kaffeewerk Classic' hand grinder."
+      },
+      {
+        "received": "2026-11-06T13:51:28.000Z",
+        "message_id": "1a1b120f16dd3c55",
+        "sender_name": "Priya Nair",
+        "subject": "Do you sell decaf espresso beans?",
+        "category": "question",
+        "urgency": "low",
+        "language": "EN",
+        "summary": "Customer is asking if the shop sells or plans to sell decaf espresso beans."
+      },
+      {
+        "received": "2026-11-06T13:51:28.000Z",
+        "message_id": "1a1b120efbe474cf",
+        "sender_name": "Sabine Keller",
+        "subject": "Frage zu Versandkosten nach Österreich",
+        "category": "question",
+        "urgency": "low",
+        "language": "DE",
+        "summary": "The customer is asking about shipping costs, delivery times, and availability for orders to Austria."
+      },
+      {
+        "received": "2026-11-06T13:51:27.000Z",
+        "message_id": "1a1b120edfc1a83d",
+        "sender_name": "Marcus Hill",
+        "subject": "Wrong grind size in my last order",
+        "category": "complaint",
+        "urgency": "low",
+        "language": "EN",
+        "summary": "The customer received whole beans instead of ground coffee and wants a replacement or return instructions."
+      },
+      {
+        "received": "2026-11-06T13:51:27.000Z",
+        "message_id": "1a1b120ed79dfb09",
+        "sender_name": "Katrin Vogel",
+        "subject": "Lieferung kam drei Tage zu spät",
+        "category": "complaint",
+        "urgency": "low",
+        "language": "DE",
+        "summary": "The customer complains that her coffee order arrived three days late and suggests more realistic delivery times."
+      },
+      {
+        "received": "2026-11-06T13:51:26.000Z",
+        "message_id": "1a1b120ea78e4a07",
+        "sender_name": "Daniel Foster",
+        "subject": "Charged twice for order KW-10288 – refund needed NOW",
+        "category": "complaint",
+        "urgency": "high",
+        "language": "EN",
+        "summary": "The customer is demanding an immediate refund because they were charged twice for an order, causing their account to overdraw."
+      },
+      {
+        "received": "2026-11-06T13:51:26.000Z",
+        "message_id": "1a1b120e98ab8817",
+        "sender_name": "Lena Brandt",
+        "subject": "Zweite Lieferung beschädigt – Kaffeemaschine defekt",
+        "category": "complaint",
+        "urgency": "high",
+        "language": "DE",
+        "summary": "The customer complains about a second damaged coffee delivery needed for a gift tomorrow and demands an immediate refund and response, threatening legal action."
+      }
+    ]
+  },
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "ed982060010812adaa9555b68bcee3051693a814306d67b24f48de812766450d"
+  }
+}

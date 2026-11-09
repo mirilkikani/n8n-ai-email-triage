@@ -1,0 +1,16 @@
+id,subject,expected_category,predicted_category,expected_urgency,predicted_urgency,expected_language,predicted_language,all_match
+01,Zweite Lieferung beschädigt – Kaffeemaschine defekt,complaint,complaint,high,high,DE,DE,yes
+02,Charged twice for order KW-10288 – refund needed NOW,complaint,complaint,high,high,EN,EN,yes
+03,Lieferung kam drei Tage zu spät,complaint,complaint,low,low,DE,DE,yes
+04,Wrong grind size in my last order,complaint,complaint,low,low,EN,EN,yes
+05,Frage zu Versandkosten nach Österreich,question,question,low,low,DE,DE,yes
+06,Do you sell decaf espresso beans?,question,question,low,low,EN,EN,yes
+07,Garantie auf die Handmühle,question,question,low,low,DE,DE,yes
+08,Can I change the delivery address?,question,question,medium,medium,EN,EN,yes
+09,Bestellung: 3x Espresso Classic 1 kg,order,order,medium,medium,DE,DE,yes
+10,Order: 2 x Cold Brew Set,order,order,medium,medium,EN,EN,yes
+11,Nachbestellung Filterpapier / Rechnung an Firma,order,order,medium,medium,DE,DE,yes
+12,Reorder – 5 bags Ethiopia Yirgacheffe,order,order,medium,medium,EN,EN,yes
+13,Sie haben ein iPhone gewonnen! Jetzt klicken,spam,spam,low,low,DE,DE,yes
+14,Boost your Google ranking – 1000 backlinks for $9,spam,spam,low,low,EN,EN,yes
+15,URGENT: Your account will be suspended – verify now,spam,spam,low,low,EN,EN,yes

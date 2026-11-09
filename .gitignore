@@ -1,0 +1,10 @@
+# Secrets and local files - never commit these
+.env
+*.key
+*credentials*
+*.pem
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
